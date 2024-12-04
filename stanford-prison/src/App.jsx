@@ -12,6 +12,8 @@ import EnvironmentControls from './components/sidebar/EnvironmentControls'
 import FeedbackSection from './components/sidebar/FeedbackSection'
 import ZimbardoProfile from './components/visual/ZimbardoProfile'
 import PersonnelProfiles from './components/visual/PersonnelProfiles'
+import IncidentCounter from './components/visual/IncidentCounter'
+import RelationshipMap from './components/visual/RelationshipMap'
 
 function App() {
   const [day, setDay] = useState(1)
@@ -23,27 +25,36 @@ function App() {
       <div className="min-h-screen bg-gray-900">
         <div className="w-full max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="grid grid-cols-12 gap-6">
-            {/* Main Content Section */}
-            <div className="col-span-12 lg:col-span-7">
+            {/* Left Section - Main Content */}
+            <div className="col-span-12 lg:col-span-8 space-y-6">
               <TimelineDisplay day={day} time={time} />
               <ZimbardoProfile />
               <PersonnelProfiles />
+              <RelationshipMap />
               <InteractionFeed />
             </div>
 
-            {/* Center Section */}
-            <div className="col-span-12 lg:col-span-2">
+            {/* Right Section - Monitoring & Control */}
+            <div className="col-span-12 lg:col-span-4 space-y-6">
+              {/* Monitoring Section */}
               <PrisonMap />
               <StressIndicator level={stressLevel} />
-            </div>
+              
+              {/* Incident Section */}
+              <div className="space-y-6">
+                <IncidentCounter />
+                <IncidentLog />
+              </div>
 
-            {/* Right Sidebar */}
-            <div className="col-span-12 lg:col-span-3 space-y-6">
-              <IncidentLog />
+              {/* Environment & Data Section */}
+              <EnvironmentControls />
+              <DataCharts />
+
+              {/* Profiles & Insights Section */}
               <ParticipantProfiles />
               <PsychologicalInsights />
-              <DataCharts />
-              <EnvironmentControls />
+              
+              {/* Feedback Section */}
               <FeedbackSection />
             </div>
           </div>

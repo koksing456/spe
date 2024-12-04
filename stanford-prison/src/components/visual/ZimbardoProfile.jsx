@@ -6,8 +6,8 @@ export default function ZimbardoProfile() {
       <h2>Principal Investigator</h2>
       <div className="flex items-center space-x-4 mt-4">
         <div className="flex-shrink-0">
-          <div className="w-24 h-24 rounded-lg overflow-hidden border-2 border-gray-700">
-            <svg className="w-full h-full text-gray-600" viewBox="0 0 100 100">
+          <div className="w-24 h-24 rounded-lg overflow-hidden border-2 border-blue-700">
+            <svg className="w-full h-full text-blue-600" viewBox="0 0 100 100">
               {/* Sketch-style portrait */}
               <path
                 d="M50 20 C60 20, 70 30, 70 40 C70 50, 65 55, 65 60 C65 65, 60 70, 50 70 C40 70, 35 65, 35 60 C35 55, 30 50, 30 40 C30 30, 40 20, 50 20"
