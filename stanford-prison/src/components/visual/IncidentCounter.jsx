@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 export default function IncidentCounter() {
   const [incidents, setIncidents] = useState({
@@ -10,6 +10,35 @@ export default function IncidentCounter() {
   })
 
   const [recentIncident, setRecentIncident] = useState(null)
+  const [isMuted, setIsMuted] = useState(false)
+  const audioRef = useRef(null)
+
+  useEffect(() => {
+    // Initialize audio when component mounts
+    audioRef.current = new Audio('/notification.mp3')
+    audioRef.current.volume = 0.5 // Set volume to 50%
+    
+    // Test audio loading
+    audioRef.current.addEventListener('canplaythrough', () => {
+      console.log('Audio loaded successfully')
+    })
+    
+    audioRef.current.addEventListener('error', (e) => {
+      console.error('Audio loading error:', e)
+    })
+
+    // Listen for noise level changes
+    const handleNoiseLevel = (event) => {
+      if (audioRef.current) {
+        audioRef.current.volume = event.detail.level
+      }
+    }
+
+    window.addEventListener('noiseLevel', handleNoiseLevel)
+    return () => {
+      window.removeEventListener('noiseLevel', handleNoiseLevel)
+    }
+  }, [])
 
   // Simulated incident data - in real app, this would come from a central state management
   useEffect(() => {
@@ -23,6 +52,19 @@ export default function IncidentCounter() {
     return () => clearInterval(timer)
   }, [])
 
+  const playSound = async () => {
+    if (!audioRef.current || isMuted) return
+    
+    try {
+      // Reset audio to start
+      audioRef.current.currentTime = 0
+      await audioRef.current.play()
+      console.log('Sound played successfully')
+    } catch (error) {
+      console.error('Error playing sound:', error)
+    }
+  }
+
   const addIncident = (type) => {
     setIncidents(prev => ({
       ...prev,
@@ -31,6 +73,18 @@ export default function IncidentCounter() {
         count: prev[type].count + 1
       }
     }))
+    
+    playSound()
+    
+    // Dispatch event for IncidentLog
+    const newIncidentEvent = new CustomEvent('newIncident', {
+      detail: {
+        type,
+        severity: type === 'conflict' ? 'high' : 
+                 type === 'resistance' ? 'medium' : 'low'
+      }
+    })
+    window.dispatchEvent(newIncidentEvent)
     
     // Show alert for new incident
     setRecentIncident({
@@ -56,7 +110,15 @@ export default function IncidentCounter() {
 
   return (
     <div className="prison-card mb-6">
-      <h2>Incident Monitor</h2>
+      <div className="flex justify-between items-center">
+        <h2>Incident Monitor</h2>
+        <button 
+          onClick={() => setIsMuted(!isMuted)}
+          className="px-3 py-1 rounded prison-card-content"
+        >
+          {isMuted ? '🔇 Unmute' : '🔊 Mute'}
+        </button>
+      </div>
       
       {/* Incident Counters */}
       <div className="grid grid-cols-2 gap-4 mt-4">
