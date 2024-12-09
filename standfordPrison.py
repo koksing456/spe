@@ -1,15 +1,60 @@
+import os
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Dict, List, Optional, Set
 from swarm import Swarm, Agent
 from datetime import datetime
 import time
 import logging
+import uvicorn
+import asyncio
+from collections import deque
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Define request/response models
+class SimulationState(BaseModel):
+    day: int = 1
+    hour: int = 6
+    incident_count: int = 0
+    stress_level: int = 0
+    messages: List[Dict] = []
+
+class SimulationResponse(BaseModel):
+    status: str
+    context: Dict
+    responses: Optional[Dict] = None
+    is_terminated: bool = False
+    message: Optional[str] = None
+
+# Initialize FastAPI app
+app = FastAPI()
+
+# Add CORS middleware with specific origins
+origins = [
+    "http://localhost:5173",  # Vite's default development server
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize Swarm client
 client = Swarm()
 
 # Set up logging
 logging.basicConfig(
-    filename='experiment_log.txt', 
-    level=logging.INFO, 
+    level=logging.INFO,
     format='%(message)s',
     encoding='utf-8'
 )
@@ -39,7 +84,7 @@ def transfer_to_narrator():
     """Transfer control to narrator for reporting."""
     return narrator_agent
 
-def log_incident(severity: int, description: str, context_variables: dict):
+def log_incident(severity, description, context_variables):
     """Log an incident and update stress levels."""
     context = context_variables.copy()
     context['incident_count'] = context.get('incident_count', 0) + 1
@@ -81,110 +126,306 @@ observer_agent = Agent(
     functions=[log_incident]
 )
 
-def run_experiment(days=14):
-    context = {
-        "day": 1,
-        "hour": 6,
-        "incident_count": 0,
-        "stress_level": 0
+# WebSocket connection manager
+class SimulationEvent:
+    def __init__(self, name, description):
+        self.name = name
+        self.description = description
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections = set()
+        self.message_history = deque(maxlen=100)
+        self.current_state = SimulationState().dict()
+        self.last_update = time.time()
+        self.min_update_interval = 3
+        self.time_progression = {
+            "day": 1,
+            "hour": 6,  # Start at 6 AM
+            "hours_per_update": 4  # Progress 4 hours each update
+        }
+        self.daily_events = {
+            6: SimulationEvent("Wake-up", "Prisoners are woken up for morning roll call"),
+            10: SimulationEvent("Morning Activities", "Prisoners engage in assigned tasks"),
+            14: SimulationEvent("Lunch", "Meal time and brief social interaction"),
+            18: SimulationEvent("Evening Activities", "Restricted movement and final tasks"),
+            22: SimulationEvent("Lights Out", "Prisoners return to cells for the night")
+        }
+        
+    def get_current_event(self):
+        hour = self.time_progression["hour"]
+        return self.daily_events.get(hour, None)
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.add(websocket)
+        # Send current state and message history to new connection
+        await websocket.send_json({
+            "type": "state_update",
+            "state": self.current_state
+        })
+        if self.message_history:
+            await websocket.send_json({
+                "type": "new_messages",
+                "messages": list(self.message_history)
+            })
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    def progress_time(self):
+        """Progress time by 4 hours"""
+        self.time_progression["hour"] += self.time_progression["hours_per_update"]
+        if self.time_progression["hour"] >= 22:  # Last update at 10 PM
+            self.time_progression["hour"] = 6  # Reset to 6 AM
+            self.time_progression["day"] += 1
+        return f"Day {self.time_progression['day']}, {self.time_progression['hour']:02d}:00"
+
+    def get_current_time(self):
+        """Get current simulation time"""
+        return f"Day {self.time_progression['day']}, {self.time_progression['hour']:02d}:00"
+
+    async def broadcast(self, message: dict):
+        if message.get("type") == "new_messages":
+            self.message_history.extend(message["messages"])
+        elif message.get("type") == "state_update":
+            self.current_state.update(message["state"])
+        
+        disconnected = set()
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except WebSocketDisconnect:
+                disconnected.add(connection)
+        
+        # Remove disconnected clients
+        self.active_connections -= disconnected
+
+    def can_update(self):
+        current_time = time.time()
+        if current_time - self.last_update >= self.min_update_interval:
+            self.last_update = current_time
+            return True
+        return False
+
+manager = ConnectionManager()
+
+# WebSocket endpoint
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    try:
+        await manager.connect(websocket)
+        while True:
+            try:
+                # Keep the connection alive and handle incoming messages
+                data = await websocket.receive_text()
+                # You can handle incoming messages here if needed
+            except WebSocketDisconnect:
+                manager.disconnect(websocket)
+                break
+    except Exception as e:
+        logging.error(f"WebSocket error: {str(e)}")
+        manager.disconnect(websocket)
+
+# Modify the next_step endpoint to include rate limiting
+@app.post("/next-step", response_model=SimulationResponse)
+async def next_step(current_state: SimulationState):
+    try:
+        # Check if enough time has passed since last update
+        if not manager.can_update():
+            return SimulationResponse(
+                status="throttled",
+                context=manager.current_state,
+                message="Please wait before requesting next update"
+            )
+
+        # Get current time and progress it
+        time_str = manager.get_current_time()
+        
+        # Update context with current time
+        context = {
+            "day": manager.time_progression["day"],
+            "hour": manager.time_progression["hour"],
+            "incident_count": current_state.incident_count,
+            "stress_level": current_state.stress_level
+        }
+        
+        # Get responses from all agents
+        responses = await get_agent_responses(context, time_str)
+        
+        # Progress time after getting responses
+        manager.progress_time()
+
+        # Check if experiment should end
+        is_terminated = context["day"] > 6 or context["stress_level"] >= 8
+        if is_terminated:
+            await manager.broadcast({
+                "type": "simulation_end",
+                "reason": "Maximum stress level reached" if context["stress_level"] >= 8 else "Experiment duration completed"
+            })
+        
+        # Broadcast updates to all connected clients
+        await manager.broadcast({
+            "type": "state_update",
+            "state": context
+        })
+        
+        await manager.broadcast({
+            "type": "new_messages",
+            "messages": [
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "role": role,
+                    "content": content,
+                    "type": "message"
+                }
+                for role, content in responses.items()
+            ]
+        })
+        
+        return SimulationResponse(
+            status="success",
+            context=context,
+            responses=responses,
+            is_terminated=is_terminated
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def get_agent_responses(context: dict, time_str: str) -> dict:
+    # Initialize conversation context
+    current_event = manager.get_current_event()
+    event_description = f"\nCurrent Activity: {current_event.name} - {current_event.description}" if current_event else ""
+    
+    conversation_context = {
+        "time": time_str,
+        "current_scene": "",
+        "current_event": event_description,
+        "emotional_state": {
+            "prisoners": {
+                "stress_level": context["stress_level"],
+                "morale": "neutral"
+            },
+            "guards": {
+                "authority_level": min(context["incident_count"] * 0.5, 10),
+                "strictness": "moderate"
+            }
+        },
+        "recent_events": [],
+        "ongoing_conflicts": []
     }
     
-    messages = []
-    current_agent = narrator_agent
+    # Get narrator's scenario first to set the scene
+    narrator_response = client.run(
+        agent=narrator_agent,
+        messages=[{
+            "role": "user", 
+            "content": f"Current time: {time_str}.{event_description}\nDescribe the current scene and atmosphere in the prison."
+        }],
+        context_variables=conversation_context
+    )
     
-    header = "=== Stanford Prison Experiment with AI ==="
-    print(header)
-    logging.info(header)
+    # Update context with narrator's scene
+    conversation_context["current_scene"] = narrator_response.messages[-1]['content']
     
-    start_date = f"Start Date: {datetime.now().strftime('%B %d, %Y')}"
-    print(start_date)
-    logging.info(start_date)
+    # Get guard's response based on the scene
+    guard_response = client.run(
+        agent=guard_agent,
+        messages=[{
+            "role": "user", 
+            "content": f"Based on this scene at {time_str}: {conversation_context['current_scene']}\nHow do you, as a guard, respond to the situation?"
+        }],
+        context_variables=conversation_context
+    )
     
-    duration = "Duration: 14 days planned\n"
-    print(duration)
-    logging.info(duration)
+    # Update context with guard's actions
+    conversation_context["recent_events"].append({
+        "actor": "guard",
+        "action": guard_response.messages[-1]['content']
+    })
+    
+    # Get prisoner's response to guard's actions
+    prisoner_response = client.run(
+        agent=prisoner_agent,
+        messages=[{
+            "role": "user", 
+            "content": f"At {time_str}, the guard has just: {guard_response.messages[-1]['content']}\nHow do you, as a prisoner, react to this?"
+        }],
+        context_variables=conversation_context
+    )
+    
+    # Update context with prisoner's reaction
+    conversation_context["recent_events"].append({
+        "actor": "prisoner",
+        "action": prisoner_response.messages[-1]['content']
+    })
 
-    while context["day"] <= days:
-        # Generate scenario from narrator
-        time_str = f"Day {context['day']}, {context['hour']:02d}:00"
-        time_header = f"\n=== {time_str} ==="
-        print(time_header)
-        logging.info(time_header)
-        
-        try:
-            # Get narrator's scenario
-            response = client.run(
-                agent=current_agent,
-                messages=messages + [{"role": "user", "content": f"Current time: {time_str}. What happens next in the prison?"}],
-                context_variables=context
-            )
-            
-            # Print and log narrator's observation
-            narrator_msg = f"\nNarrator: {response.messages[-1]['content']}"
-            print(narrator_msg)
-            logging.info(narrator_msg)
-            
-            # Get guard's response
-            guard_response = client.run(
-                agent=guard_agent,
-                messages=[{"role": "user", "content": response.messages[-1]['content']}],
-                context_variables=context
-            )
-            guard_msg = f"\nGuard: {guard_response.messages[-1]['content']}"
-            print(guard_msg)
-            logging.info(guard_msg)
-            
-            # Get prisoner's response
-            prisoner_response = client.run(
-                agent=prisoner_agent,
-                messages=[{"role": "user", "content": guard_response.messages[-1]['content']}],
-                context_variables=context
-            )
-            prisoner_msg = f"\nPrisoner: {prisoner_response.messages[-1]['content']}"
-            print(prisoner_msg)
-            logging.info(prisoner_msg)
-            
-            # Get psychologist's observation
-            psych_response = client.run(
-                agent=psychologist_agent,
-                messages=[{"role": "user", "content": f"Observe this interaction:\nGuard: {guard_response.messages[-1]['content']}\nPrisoner: {prisoner_response.messages[-1]['content']}"}],
-                context_variables=context
-            )
-            psych_msg = f"\nPsychologist: {psych_response.messages[-1]['content']}"
-            print(psych_msg)
-            logging.info(psych_msg)
-            
-            # Update context with any changes
-            messages = response.messages
-            current_agent = response.agent
-            context = response.context_variables
-            
-        except Exception as e:
-            error_msg = f"Error occurred: {str(e)}"
-            print(error_msg)
-            logging.error(error_msg)
+    # Extract stress level from prisoner's response
+    stress_indicators = {
+        "very stressed": 9,
+        "highly stressed": 8,
+        "quite stressed": 7,
+        "stressed": 6,
+        "somewhat stressed": 5,
+        "slightly stressed": 4,
+        "a bit stressed": 3,
+        "mildly stressed": 2,
+        "minimal stress": 1,
+        "calm": 0,
+        "relaxed": 0
+    }
+    
+    # Update stress level based on prisoner's response
+    response_text = prisoner_response.messages[-1]['content'].lower()
+    new_stress_level = context["stress_level"]  # Default to current level
+    
+    # Check for explicit stress mentions
+    for indicator, level in stress_indicators.items():
+        if indicator in response_text:
+            new_stress_level = level
             break
-            
-        # Advance time
-        context["hour"] += 4
-        if context["hour"] >= 24:
-            context["hour"] = 6
-            context["day"] += 1
-            day_msg = f"\n=== Day {context['day']} ===\n"
-            print(day_msg)
-            logging.info(day_msg)
+    
+    # Look for implicit stress indicators
+    if "anxiety" in response_text or "worried" in response_text or "fear" in response_text:
+        new_stress_level += 1
+    if "angry" in response_text or "frustrated" in response_text or "upset" in response_text:
+        new_stress_level += 1
+    if "calm" in response_text or "relieved" in response_text or "comfortable" in response_text:
+        new_stress_level -= 1
         
-        # Check stress levels for early termination
-        if context.get("stress_level", 0) >= 8:
-            termination_msg = "\n!!! EXPERIMENT TERMINATED !!!"
-            stress_msg = f"High stress levels detected: {context['stress_level']}/10"
-            print(termination_msg)
-            print(stress_msg)
-            logging.info(termination_msg)
-            logging.info(stress_msg)
-            break
-            
-        time.sleep(2)  # Prevent rate limiting
+    # Ensure stress level stays within bounds
+    context["stress_level"] = max(0, min(10, new_stress_level))
+    
+    # Get psychologist's analysis of the interaction
+    psych_response = client.run(
+        agent=psychologist_agent,
+        messages=[{
+            "role": "user", 
+            "content": f"Analyze this interaction at {time_str}:\nScene: {conversation_context['current_scene']}\nGuard: {guard_response.messages[-1]['content']}\nPrisoner: {prisoner_response.messages[-1]['content']}"
+        }],
+        context_variables=conversation_context
+    )
+    
+    # Check for conflicts in psychologist's analysis
+    if "conflict" in psych_response.messages[-1]['content'].lower() or "tension" in psych_response.messages[-1]['content'].lower():
+        context["incident_count"] += 1
+        conversation_context["ongoing_conflicts"].append({
+            "day": context["day"],
+            "hour": context["hour"],
+            "description": psych_response.messages[-1]['content']
+        })
+    
+    return {
+        "narrator": narrator_response.messages[-1]['content'],
+        "guard": guard_response.messages[-1]['content'],
+        "prisoner": prisoner_response.messages[-1]['content'],
+        "psychologist": psych_response.messages[-1]['content']
+    }
+
+@app.get("/status")
+async def get_status():
+    return {"status": "running"}
 
 if __name__ == "__main__":
-    run_experiment()
+    uvicorn.run(app, host="0.0.0.0", port=8000)
