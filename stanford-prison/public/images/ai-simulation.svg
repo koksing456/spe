@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Enhanced Grid Pattern -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1a365d" stroke-width="0.5" opacity="0.3">
+        <animate attributeName="stroke-opacity" values="0.3;0.6;0.3" dur="3s" repeatCount="indefinite"/>
+      </path>
+    </pattern>
+    
+    <!-- Enhanced Glow Effects -->
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#4299e1;stop-opacity:0.6">
+        <animate attributeName="stop-opacity" values="0.6;0.8;0.6" dur="2s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" style="stop-color:#4299e1;stop-opacity:0"/>
+    </radialGradient>
+    
+    <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#63b3ed;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#4299e1;stop-opacity:0"/>
+    </radialGradient>
+
+    <!-- Particle Effects -->
+    <filter id="blur">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1"/>
+    </filter>
+    
+    <filter id="particleBlur">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2"/>
+    </filter>
+
+    <!-- Hover Effects -->
+    <filter id="hover">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5"/>
+      <feColorMatrix type="matrix" values="1 0 0 0 0.2   0 1 0 0 0.5   0 0 1 0 1  0 0 0 1 0"/>
+    </filter>
+  </defs>
+  
+  <!-- Animated Background -->
+  <rect width="100%" height="100%" fill="#0f172a">
+    <animate attributeName="fill" values="#0f172a;#1a202c;#0f172a" dur="10s" repeatCount="indefinite"/>
+  </rect>
+  <rect width="100%" height="100%" fill="url(#grid)"/>
+  
+  <!-- Background Particles -->
+  <g id="backgroundParticles" filter="url(#particleBlur)">
+    <circle r="1" opacity="0.3">
+      <animate attributeName="cx" values="0;800" dur="15s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="300;100" dur="15s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="1" opacity="0.3">
+      <animate attributeName="cx" values="800;0" dur="20s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="100;500" dur="20s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="1" opacity="0.3">
+      <animate attributeName="cx" values="400;800" dur="12s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="0;600" dur="12s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- Neural Network Nodes and Connections -->
+  <!-- Layer 1 with Enhanced Effects -->
+  <g id="layer1">
+    <g class="node-group" filter="url(#hover)">
+      <circle cx="200" cy="150" r="12" fill="url(#nodeGlow)" opacity="0.5"/>
+      <circle cx="200" cy="150" r="8" fill="#4299e1">
+        <animate attributeName="r" values="8;10;8" dur="2s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+    <g class="node-group" filter="url(#hover)">
+      <circle cx="200" cy="250" r="12" fill="url(#nodeGlow)" opacity="0.5"/>
+      <circle cx="200" cy="250" r="8" fill="#4299e1">
+        <animate attributeName="r" values="8;10;8" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+    <g class="node-group" filter="url(#hover)">
+      <circle cx="200" cy="350" r="12" fill="url(#nodeGlow)" opacity="0.5"/>
+      <circle cx="200" cy="350" r="8" fill="#4299e1">
+        <animate attributeName="r" values="8;10;8" dur="2s" begin="1s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+    <g class="node-group" filter="url(#hover)">
+      <circle cx="200" cy="450" r="12" fill="url(#nodeGlow)" opacity="0.5"/>
+      <circle cx="200" cy="450" r="8" fill="#4299e1">
+        <animate attributeName="r" values="8;10;8" dur="2s" begin="1.5s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+  </g>
+  
+  <!-- Layer 2 with Enhanced Effects -->
+  <g id="layer2">
+    <g class="node-group" filter="url(#hover)">
+      <circle cx="400" cy="200" r="12" fill="url(#nodeGlow)" opacity="0.5"/>
+      <circle cx="400" cy="200" r="8" fill="#4299e1">
+        <animate attributeName="fill-opacity" values="1;0.7;1" dur="3s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+    <g class="node-group" filter="url(#hover)">
+      <circle cx="400" cy="300" r="12" fill="url(#nodeGlow)" opacity="0.5"/>
+      <circle cx="400" cy="300" r="8" fill="#4299e1">
+        <animate attributeName="fill-opacity" values="1;0.7;1" dur="3s" begin="1s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+    <g class="node-group" filter="url(#hover)">
+      <circle cx="400" cy="400" r="12" fill="url(#nodeGlow)" opacity="0.5"/>
+      <circle cx="400" cy="400" r="8" fill="#4299e1">
+        <animate attributeName="fill-opacity" values="1;0.7;1" dur="3s" begin="2s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+  </g>
+  
+  <!-- Layer 3 with Enhanced Effects -->
+  <g id="layer3">
+    <g class="node-group" filter="url(#hover)">
+      <circle cx="600" cy="250" r="12" fill="url(#nodeGlow)" opacity="0.5"/>
+      <circle cx="600" cy="250" r="8" fill="#4299e1">
+        <animate attributeName="r" values="8;12;8" dur="4s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+    <g class="node-group" filter="url(#hover)">
+      <circle cx="600" cy="350" r="12" fill="url(#nodeGlow)" opacity="0.5"/>
+      <circle cx="600" cy="350" r="8" fill="#4299e1">
+        <animate attributeName="r" values="8;12;8" dur="4s" begin="2s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+  </g>
+  
+  <!-- Enhanced Connections with Data Flow -->
+  <g id="connections" stroke="#4299e1" stroke-width="1" opacity="0.5">
+    <!-- Layer 1 to 2 with Animated Particles -->
+    <g class="connection-group">
+      <line x1="200" y1="150" x2="400" y2="200">
+        <animate attributeName="stroke-opacity" values="0.5;0.8;0.5" dur="2s" repeatCount="indefinite"/>
+      </line>
+      <circle r="2" fill="#63b3ed">
+        <animateMotion dur="2s" repeatCount="indefinite">
+          <mpath href="#path1"/>
+        </animateMotion>
+      </circle>
+    </g>
+    <!-- Add more connection groups with similar patterns -->
+  </g>
+  
+  <!-- Data Flow Paths (hidden but used for animation) -->
+  <defs>
+    <path id="path1" d="M200,150 Q300,175 400,200" stroke="none" fill="none"/>
+    <!-- Add more paths for other connections -->
+  </defs>
+  
+  <!-- Enhanced Glowing Effects -->
+  <g id="glowEffects">
+    <circle cx="400" cy="300" r="100" fill="url(#glow)" opacity="0.3">
+      <animate attributeName="r" values="100;120;100" dur="5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="400" cy="300" r="150" fill="url(#glow)" opacity="0.1">
+      <animate attributeName="r" values="150;180;150" dur="7s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- Multiple Data Flow Particles with Enhanced Effects -->
+  <g id="dataParticles" filter="url(#blur)">
+    <g class="particle-stream">
+      <circle cx="300" cy="250" r="2">
+        <animate attributeName="cx" values="200;400" dur="2s" repeatCount="indefinite"/>
+        <animate attributeName="cy" values="250;300" dur="2s" repeatCount="indefinite"/>
+        <animate attributeName="r" values="2;3;2" dur="2s" repeatCount="indefinite"/>
+        <animate attributeName="fill" values="#4299e1;#63b3ed;#4299e1" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="300" cy="350" r="2">
+        <animate attributeName="cx" values="200;400" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+        <animate attributeName="cy" values="350;400" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+        <animate attributeName="r" values="2;3;2" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+        <animate attributeName="fill" values="#4299e1;#63b3ed;#4299e1" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="500" cy="300" r="2">
+        <animate attributeName="cx" values="400;600" dur="2s" begin="1s" repeatCount="indefinite"/>
+        <animate attributeName="cy" values="300;350" dur="2s" begin="1s" repeatCount="indefinite"/>
+        <animate attributeName="r" values="2;3;2" dur="2s" begin="1s" repeatCount="indefinite"/>
+        <animate attributeName="fill" values="#4299e1;#63b3ed;#4299e1" dur="2s" begin="1s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+  </g>
+</svg> 

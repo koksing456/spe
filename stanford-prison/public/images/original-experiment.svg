@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Enhanced Light Effects -->
+    <radialGradient id="light" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:white;stop-opacity:1">
+        <animate attributeName="stop-opacity" values="1;0.7;1" dur="4s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" style="stop-color:white;stop-opacity:0"/>
+    </radialGradient>
+    
+    <!-- Enhanced Noise Pattern -->
+    <pattern id="noise" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+      <rect width="100" height="100" fill="#ffffff" opacity="0.1"/>
+      <circle cx="50" cy="50" r="1" fill="#ffffff" opacity="0.5">
+        <animate attributeName="opacity" values="0.5;0.2;0.5" dur="3s" repeatCount="indefinite"/>
+      </circle>
+    </pattern>
+    
+    <!-- Enhanced Vignette -->
+    <radialGradient id="vignette">
+      <stop offset="70%" stop-color="transparent">
+        <animate attributeName="offset" values="70%;75%;70%" dur="5s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" stop-color="black"/>
+    </radialGradient>
+
+    <!-- Shadow Effects -->
+    <filter id="shadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="2" dy="2"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Door Light Effect -->
+    <radialGradient id="doorLight">
+      <stop offset="0%" style="stop-color:white;stop-opacity:0.1">
+        <animate attributeName="stop-opacity" values="0.1;0.2;0.1" dur="2s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" style="stop-color:white;stop-opacity:0"/>
+    </radialGradient>
+
+    <!-- Emergency Light Effect -->
+    <radialGradient id="emergencyLight">
+      <stop offset="0%" style="stop-color:#ff4444;stop-opacity:0.1">
+        <animate attributeName="stop-opacity" values="0.1;0.2;0.1" dur="1s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" style="stop-color:#ff0000;stop-opacity:0"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Animated Background -->
+  <rect width="100%" height="100%" fill="#1a1a1a">
+    <animate attributeName="fill" values="#1a1a1a;#262626;#1a1a1a" dur="10s" repeatCount="indefinite"/>
+  </rect>
+  
+  <!-- Prison Corridor with Enhanced Shadow -->
+  <polygon points="150,100 650,100 800,600 0,600" fill="#262626" filter="url(#shadow)">
+    <animate attributeName="fill" values="#262626;#2d2d2d;#262626" dur="8s" repeatCount="indefinite"/>
+  </polygon>
+  
+  <!-- Animated Floor Grid -->
+  <g id="floorGrid" stroke="#333" stroke-width="1">
+    <line x1="150" y1="100" x2="0" y2="600">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="3s" repeatCount="indefinite"/>
+    </line>
+    <line x1="250" y1="100" x2="160" y2="600">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="3s" begin="0.5s" repeatCount="indefinite"/>
+    </line>
+    <line x1="350" y1="100" x2="320" y2="600">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="3s" begin="1s" repeatCount="indefinite"/>
+    </line>
+    <line x1="450" y1="100" x2="480" y2="600">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="3s" begin="1.5s" repeatCount="indefinite"/>
+    </line>
+    <line x1="550" y1="100" x2="640" y2="600">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="3s" begin="2s" repeatCount="indefinite"/>
+    </line>
+    <line x1="650" y1="100" x2="800" y2="600">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="3s" begin="2.5s" repeatCount="indefinite"/>
+    </line>
+  </g>
+  
+  <!-- Animated Horizontal Lines -->
+  <g id="horizontalLines" stroke="#333" stroke-width="1">
+    <line x1="0" y1="200" x2="800" y2="200">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="4s" repeatCount="indefinite"/>
+    </line>
+    <line x1="0" y1="300" x2="800" y2="300">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="4s" begin="1s" repeatCount="indefinite"/>
+    </line>
+    <line x1="0" y1="400" x2="800" y2="400">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="4s" begin="2s" repeatCount="indefinite"/>
+    </line>
+    <line x1="0" y1="500" x2="800" y2="500">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="4s" begin="3s" repeatCount="indefinite"/>
+    </line>
+  </g>
+  
+  <!-- Animated Cell Doors -->
+  <g id="leftDoors" filter="url(#shadow)">
+    <rect x="180" y="150" width="80" height="160" fill="#1a1a1a" stroke="#404040" stroke-width="2">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="5s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="160" y="300" width="80" height="160" fill="#1a1a1a" stroke="#404040" stroke-width="2">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="5s" begin="1.5s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="140" y="450" width="80" height="120" fill="#1a1a1a" stroke="#404040" stroke-width="2">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="5s" begin="3s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+  
+  <g id="rightDoors" filter="url(#shadow)">
+    <rect x="540" y="150" width="80" height="160" fill="#1a1a1a" stroke="#404040" stroke-width="2">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="5s" begin="0.5s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="560" y="300" width="80" height="160" fill="#1a1a1a" stroke="#404040" stroke-width="2">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="5s" begin="2s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="580" y="450" width="80" height="120" fill="#1a1a1a" stroke="#404040" stroke-width="2">
+      <animate attributeName="stroke-opacity" values="1;0.5;1" dur="5s" begin="3.5s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+  
+  <!-- Enhanced Light Effects -->
+  <g id="lights">
+    <circle cx="400" cy="50" r="100" fill="url(#light)" opacity="0.1">
+      <animate attributeName="r" values="100;120;100" dur="6s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.1;0.2;0.1" dur="6s" repeatCount="indefinite"/>
+    </circle>
+    <!-- Additional Light Sources -->
+    <circle cx="200" cy="150" r="50" fill="url(#light)" opacity="0.05">
+      <animate attributeName="opacity" values="0.05;0.1;0.05" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="600" cy="150" r="50" fill="url(#light)" opacity="0.05">
+      <animate attributeName="opacity" values="0.05;0.1;0.05" dur="4s" begin="2s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  
+  <!-- Enhanced Texture Overlay -->
+  <rect width="100%" height="100%" fill="url(#noise)" opacity="0.05">
+    <animate attributeName="opacity" values="0.05;0.08;0.05" dur="8s" repeatCount="indefinite"/>
+  </rect>
+  
+  <!-- Enhanced Vignette Effect -->
+  <rect width="100%" height="100%" fill="url(#vignette)" opacity="0.5">
+    <animate attributeName="opacity" values="0.5;0.6;0.5" dur="10s" repeatCount="indefinite"/>
+  </rect>
+</svg> 

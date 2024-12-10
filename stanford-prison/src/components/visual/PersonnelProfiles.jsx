@@ -41,19 +41,19 @@ export default function PersonnelProfiles() {
         hair: "M30 40 C30 30, 40 20, 50 20 C60 20, 70 30, 70 40 C70 35, 65 25, 50 25 C35 25, 30 35, 30 40"
       }
     },
-    {
-      role: 'Observer',
-      title: 'Research Observer',
-      description: 'Documenting behaviors and interactions throughout the study.',
-      color: '#10B981', // Green
-      svgPaths: {
-        // Observer with notepad and attentive expression
-        face: "M50 25 C60 25, 70 35, 70 45 C70 55, 65 60, 65 65 C65 70, 60 75, 50 75 C40 75, 35 70, 35 65 C35 60, 30 55, 30 45 C30 35, 40 25, 50 25",
-        features: "M43 50 C44 48, 46 48, 47 50 M53 50 C54 48, 56 48, 57 50 M45 58 C47 60, 53 60, 55 58",
-        notepad: "M65 45 L75 45 L75 65 L65 65 Z M67 50 L73 50 M67 55 L73 55 M67 60 L73 60",
-        glasses: "M38 48 C40 48, 47 48, 49 48 M51 48 C53 48, 60 48, 62 48 M49 48 L51 48"
-      }
-    }
+    // {
+    //   role: 'Observer',
+    //   title: 'Research Observer',
+    //   description: 'Documenting behaviors and interactions throughout the study.',
+    //   color: '#10B981', // Green
+    //   svgPaths: {
+    //     // Observer with notepad and attentive expression
+    //     face: "M50 25 C60 25, 70 35, 70 45 C70 55, 65 60, 65 65 C65 70, 60 75, 50 75 C40 75, 35 70, 35 65 C35 60, 30 55, 30 45 C30 35, 40 25, 50 25",
+    //     features: "M43 50 C44 48, 46 48, 47 50 M53 50 C54 48, 56 48, 57 50 M45 58 C47 60, 53 60, 55 58",
+    //     notepad: "M65 45 L75 45 L75 65 L65 65 Z M67 50 L73 50 M67 55 L73 55 M67 60 L73 60",
+    //     glasses: "M38 48 C40 48, 47 48, 49 48 M51 48 C53 48, 60 48, 62 48 M49 48 L51 48"
+    //   }
+    // }
   ]
 
   return (
