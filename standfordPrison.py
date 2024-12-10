@@ -39,7 +39,12 @@ origins = [
     "http://localhost:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
+    "https://stanford-prison.vercel.app",  # Production frontend URL
+    os.getenv("FRONTEND_URL", "")  # Optional frontend URL from environment variable
 ]
+
+# Filter out empty strings from origins
+origins = [origin for origin in origins if origin]
 
 app.add_middleware(
     CORSMiddleware,
@@ -142,7 +147,7 @@ class ConnectionManager:
         self.time_progression = {
             "day": 1,
             "hour": 6,  # Start at 6 AM
-            "hours_per_update": 4  # Progress 4 hours each update
+            "hours_per_update": 14400  # Progress 4 hours each update
         }
         self.daily_events = {
             6: SimulationEvent("Wake-up", "Prisoners are woken up for morning roll call"),
