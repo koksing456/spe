@@ -138,7 +138,7 @@ class ConnectionManager:
         self.message_history = deque(maxlen=100)
         self.current_state = SimulationState().dict()
         self.last_update = time.time()
-        self.min_update_interval = 3
+        self.min_update_interval = 10  # 4 hours in seconds
         self.time_progression = {
             "day": 1,
             "hour": 6,  # Start at 6 AM
@@ -293,6 +293,192 @@ async def next_step(current_state: SimulationState):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def calculate_stress_level(context: dict, prisoner_response: str, day: int, hour: int) -> int:
+    """Calculate stress level based on psychological factors."""
+    current_stress = context.get('stress_level', 0)
+    
+    # 1. Time-based Psychological Pressure
+    # Exponential stress increase over days (but tempered)
+    time_stress = min(5, (day * 1.5) / 2)  # Increases more rapidly in early days
+    
+    # 2. Environmental Stressors
+    env_stress = 0
+    # Morning stress (adjustment to prison routine)
+    if hour == 6:
+        env_stress += 2
+    # Night stress (isolation and reflection time)
+    elif hour == 22:
+        env_stress += 1.5
+    # Meal times (social pressure and surveillance)
+    elif hour == 14:
+        env_stress += 1
+    
+    # 3. Cumulative Environmental Effect
+    # The longer in the experiment, the harder it is to cope with environment
+    env_stress *= (1 + (day - 1) * 0.2)  # 20% increase per day
+    
+    # 4. Incident Impact
+    # Recent incidents have stronger effect on stress
+    incident_count = context.get('incident_count', 0)
+    incident_stress = min(6, incident_count * (1 + (day - 1) * 0.1))  # Incidents become more stressful over time
+    
+    # 5. Response Analysis
+    response_lower = prisoner_response.lower()
+    
+    # Explicit stress mention
+    response_stress = None
+    if "/10" in response_lower:
+        try:
+            response_stress = int(response_lower.split("/10")[0].split()[-1])
+        except ValueError:
+            pass
+    
+    # Psychological state indicators
+    psych_indicators = {
+        # Severe psychological stress
+        "breaking point": 10,
+        "can't take it": 9,
+        "very stressed": 9,
+        "losing it": 8,
+        "highly stressed": 8,
+        "overwhelming": 8,
+        
+        # Moderate psychological stress
+        "quite stressed": 7,
+        "getting to me": 6,
+        "stressed": 6,
+        "pressure": 5,
+        "somewhat stressed": 5,
+        
+        # Mild psychological stress
+        "slightly stressed": 4,
+        "a bit stressed": 3,
+        "uneasy": 3,
+        "mildly stressed": 2,
+        "minimal stress": 1,
+        
+        # Coping states
+        "managing": 2,
+        "coping": 2,
+        "handling it": 2,
+        
+        # Calm states
+        "not stressed": 0,
+        "calm": 0,
+        "relaxed": 0
+    }
+    
+    for indicator, level in psych_indicators.items():
+        if indicator in response_lower:
+            response_stress = level
+            break
+    
+    # 6. Implicit Psychological State Analysis
+    stress_factors = {
+        'severe': {
+            'keywords': ['anxious', 'worried', 'nervous', 'afraid', 'scared', 'tense', 'fear', 'dread', 'panic'],
+            'level': 7
+        },
+        'moderate': {
+            'keywords': ['uncomfortable', 'uneasy', 'concerned', 'apprehensive', 'disturbed', 'troubled'],
+            'level': 5
+        },
+        'mild': {
+            'keywords': ['unsure', 'uncertain', 'hesitant', 'cautious'],
+            'level': 3
+        },
+        'coping': {
+            'keywords': ['fine', 'okay', 'alright', 'good', 'managing', 'handling'],
+            'level': 1
+        }
+    }
+    
+    keyword_stress = 0
+    for severity, data in stress_factors.items():
+        if any(word in response_lower for word in data['keywords']):
+            keyword_stress = data['level']
+            break
+    
+    # 7. Calculate Final Stress Level
+    if response_stress is not None:
+        # If explicitly mentioned, use that as base but consider other factors
+        new_stress = response_stress
+        # Add partial influence from other factors
+        new_stress += (time_stress + env_stress + incident_stress) * 0.3
+    else:
+        # Start with current stress
+        new_stress = current_stress
+        
+        # Factor in all stressors
+        new_stress = max(
+            new_stress,
+            time_stress + env_stress,
+            incident_stress,
+            keyword_stress
+        )
+    
+    # 8. Stress Level Management
+    # Stress can't drop too quickly (psychological inertia)
+    if new_stress < current_stress:
+        max_drop = 1 if day == 1 else 0.5  # Harder to relax as experiment progresses
+        new_stress = max(new_stress, current_stress - max_drop)
+    
+    # Ensure stress level stays within bounds
+    return min(10, max(0, round(new_stress)))
+
+def detect_incident_type(response_text: str, role: str) -> tuple[str, str]:
+    """Detect incident type and severity from response text."""
+    response_lower = response_text.lower()
+    
+    # Skip incident detection for analytical content
+    if role == "psychologist" and any(word in response_lower for word in ["analysis", "observation", "monitor", "recommend"]):
+        return None, None
+        
+    # Define negative context words that indicate no incident
+    negative_contexts = [
+        "no conflict", "without tension", "remains calm", "peaceful", "smooth",
+        "cooperative", "compliant", "orderly", "routine", "normal"
+    ]
+    
+    # If any negative context words are present, it's likely not an incident
+    if any(context in response_lower for context in negative_contexts):
+        return None, None
+    
+    # Define keywords for each incident type with required context
+    incident_patterns = {
+        'conflict': {
+            'keywords': ['conflict', 'argument', 'fight', 'tension', 'confrontation', 'dispute'],
+            'required_context': ['between', 'with', 'against', 'escalate', 'rise']
+        },
+        'resistance': {
+            'keywords': ['resist', 'refuse', 'disobey', 'protest', 'defy', 'rebel'],
+            'required_context': ['against', 'rules', 'order', 'command', 'instruction']
+        },
+        'behavioral': {
+            'keywords': ['behavior', 'attitude', 'demeanor', 'conduct', 'acting'],
+            'required_context': ['problem', 'issue', 'concern', 'change', 'negative']
+        },
+        'compliance': {
+            'keywords': ['comply', 'obey', 'follow', 'accept', 'cooperate'],
+            'required_context': ['rules', 'order', 'instruction', 'command', 'direction']
+        }
+    }
+    
+    # Check for each incident type
+    for incident_type, pattern in incident_patterns.items():
+        # Check if any keyword is present
+        if any(keyword in response_lower for keyword in pattern['keywords']):
+            # Verify the context
+            if any(context in response_lower for context in pattern['required_context']):
+                # Determine severity based on incident type and additional factors
+                severity = 'high' if incident_type == 'conflict' and \
+                    any(word in response_lower for word in ['serious', 'severe', 'major', 'significant']) else \
+                    'medium' if incident_type == 'resistance' or \
+                    any(word in response_lower for word in ['concerning', 'worrying', 'problematic']) else 'low'
+                return incident_type, severity
+            
+    return None, None
+
 async def get_agent_responses(context: dict, time_str: str) -> dict:
     # Initialize conversation context
     current_event = manager.get_current_event()
@@ -361,42 +547,19 @@ async def get_agent_responses(context: dict, time_str: str) -> dict:
         "action": prisoner_response.messages[-1]['content']
     })
 
-    # Extract stress level from prisoner's response
-    stress_indicators = {
-        "very stressed": 9,
-        "highly stressed": 8,
-        "quite stressed": 7,
-        "stressed": 6,
-        "somewhat stressed": 5,
-        "slightly stressed": 4,
-        "a bit stressed": 3,
-        "mildly stressed": 2,
-        "minimal stress": 1,
-        "calm": 0,
-        "relaxed": 0
-    }
+    # Extract and update stress level from prisoner's response
+    prisoner_text = prisoner_response.messages[-1]['content']
+    new_stress = calculate_stress_level(
+        context,
+        prisoner_text,
+        context["day"],
+        context["hour"]
+    )
     
-    # Update stress level based on prisoner's response
-    response_text = prisoner_response.messages[-1]['content'].lower()
-    new_stress_level = context["stress_level"]  # Default to current level
-    
-    # Check for explicit stress mentions
-    for indicator, level in stress_indicators.items():
-        if indicator in response_text:
-            new_stress_level = level
-            break
-    
-    # Look for implicit stress indicators
-    if "anxiety" in response_text or "worried" in response_text or "fear" in response_text:
-        new_stress_level += 1
-    if "angry" in response_text or "frustrated" in response_text or "upset" in response_text:
-        new_stress_level += 1
-    if "calm" in response_text or "relieved" in response_text or "comfortable" in response_text:
-        new_stress_level -= 1
-        
-    # Ensure stress level stays within bounds
-    context["stress_level"] = max(0, min(10, new_stress_level))
-    
+    # Update stress in context
+    context["stress_level"] = new_stress
+    conversation_context["emotional_state"]["prisoners"]["stress_level"] = new_stress
+
     # Get psychologist's analysis of the interaction
     psych_response = client.run(
         agent=psychologist_agent,
@@ -416,12 +579,32 @@ async def get_agent_responses(context: dict, time_str: str) -> dict:
             "description": psych_response.messages[-1]['content']
         })
     
-    return {
+    # Check for incidents in all responses
+    all_responses = {
         "narrator": narrator_response.messages[-1]['content'],
         "guard": guard_response.messages[-1]['content'],
         "prisoner": prisoner_response.messages[-1]['content'],
         "psychologist": psych_response.messages[-1]['content']
     }
+
+    # Look for incidents in each response
+    for role, content in all_responses.items():
+        incident_type, severity = detect_incident_type(content, role)
+        if incident_type:
+            # Only broadcast if it's a real incident (not just analytical mention)
+            if not (role == "psychologist" and "analysis" in content.lower()):
+                await manager.broadcast({
+                    "type": "incident",
+                    "incident": {
+                        "type": incident_type,
+                        "severity": severity,
+                        "timestamp": datetime.now().isoformat(),
+                        "description": f"Incident detected in {role}'s response: {content[:100]}..."
+                    }
+                })
+                context["incident_count"] += 1
+
+    return all_responses
 
 @app.get("/status")
 async def get_status():

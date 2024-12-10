@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 const WS_URL = 'ws://localhost:8000/ws'
 const RECONNECT_INTERVAL = 5000 // 5 seconds
-const SIMULATION_INTERVAL = 10000 // 10 seconds between updates
+const FOUR_HOURS_IN_MS = 4 * 60 * 60 * 1000 // 4 hours in milliseconds
 
 const useSimulationStore = create((set) => ({
     messages: [],
@@ -13,27 +13,19 @@ const useSimulationStore = create((set) => ({
         stress_level: 0
     },
     isConnected: false,
-    isRunning: true,
     addMessage: (message) => set((state) => ({
         messages: [...state.messages, message]
     })),
     updateState: (newState) => set({ currentState: newState }),
-    setConnected: (connected) => set({ isConnected: connected }),
-    setRunning: (running) => set({ isRunning: running }),
+    setConnected: (connected) => set({ isConnected: connected })
 }))
 
 class WebSocketService {
-    static instance = null
-    
     constructor() {
-        if (WebSocketService.instance) {
-            return WebSocketService.instance
-        }
         this.socket = null
         this.store = useSimulationStore
         this.isConnecting = false
-        this.simulationInterval = null
-        WebSocketService.instance = this
+        this.nextUpdateTimeout = null
     }
 
     connect() {
@@ -51,23 +43,29 @@ class WebSocketService {
                 console.log('WebSocket connected')
                 this.isConnecting = false
                 this.store.getState().setConnected(true)
-                this.startSimulation()
+                this.scheduleNextUpdate()
             }
 
             this.socket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data)
-                    
                     if (data.type === 'state_update') {
                         this.store.getState().updateState(data.state)
                     } else if (data.type === 'new_messages') {
                         data.messages.forEach(message => {
                             this.store.getState().addMessage(message)
                         })
-                    } else if (data.type === 'simulation_end') {
-                        console.log('Simulation ended:', data.reason)
-                        this.stopSimulation()
-                        this.store.getState().setRunning(false)
+                    } else if (data.type === 'incident') {
+                        // Dispatch custom event for IncidentCounter
+                        const newIncidentEvent = new CustomEvent('newIncident', {
+                            detail: {
+                                type: data.incident.type,
+                                severity: data.incident.severity,
+                                description: data.incident.description,
+                                timestamp: data.incident.timestamp
+                            }
+                        })
+                        window.dispatchEvent(newIncidentEvent)
                     }
                 } catch (error) {
                     console.error('Error processing message:', error)
@@ -78,78 +76,70 @@ class WebSocketService {
                 console.log('WebSocket disconnected')
                 this.isConnecting = false
                 this.store.getState().setConnected(false)
-                this.stopSimulation()
-                // Attempt to reconnect after delay
+                this.clearScheduledUpdate()
                 setTimeout(() => this.connect(), RECONNECT_INTERVAL)
-            }
-
-            this.socket.onerror = (error) => {
-                console.error('WebSocket error:', error)
-                this.socket.close()
             }
 
         } catch (error) {
             console.error('Failed to create WebSocket connection:', error)
             this.isConnecting = false
-            // Attempt to reconnect after delay
             setTimeout(() => this.connect(), RECONNECT_INTERVAL)
         }
     }
 
-    startSimulation() {
-        if (this.simulationInterval) {
-            return
-        }
+    scheduleNextUpdate() {
+        // Calculate time until next 4-hour mark
+        const now = new Date()
+        const hours = now.getHours()
+        const nextInterval = Math.ceil(hours / 4) * 4
+        const delay = ((nextInterval - hours + 24) % 24) * 60 * 60 * 1000 - 
+                     now.getMinutes() * 60 * 1000 - 
+                     now.getSeconds() * 1000
 
-        const advanceSimulation = async () => {
-            if (!this.store.getState().isRunning) {
-                return
-            }
+        console.log(`Next update scheduled in ${delay/1000/60} minutes`)
 
-            try {
-                const response = await fetch('http://localhost:8000/next-step', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        ...this.store.getState().currentState,
-                        messages: this.store.getState().messages
-                    })
-                })
+        // Clear any existing timeout
+        this.clearScheduledUpdate()
 
-                if (!response.ok) {
-                    if (response.status !== 422) {  // Ignore validation errors
-                        console.error('Failed to advance simulation:', await response.text())
-                    }
-                }
-            } catch (error) {
-                console.error('Error advancing simulation:', error)
-            }
-        }
-
-        // Start the simulation loop
-        advanceSimulation() // Run immediately
-        this.simulationInterval = setInterval(advanceSimulation, SIMULATION_INTERVAL)
+        // Schedule next update
+        this.nextUpdateTimeout = setTimeout(() => {
+            this.advanceSimulation()
+            // Schedule next update in 4 hours
+            this.scheduleNextUpdate()
+        }, delay)
     }
 
-    stopSimulation() {
-        if (this.simulationInterval) {
-            clearInterval(this.simulationInterval)
-            this.simulationInterval = null
+    clearScheduledUpdate() {
+        if (this.nextUpdateTimeout) {
+            clearTimeout(this.nextUpdateTimeout)
+            this.nextUpdateTimeout = null
+        }
+    }
+
+    async advanceSimulation() {
+        try {
+            const response = await fetch('http://localhost:8000/next-step', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(this.store.getState().currentState)
+            })
+
+            if (!response.ok && response.status !== 422) {
+                console.error('Failed to advance simulation:', await response.text())
+            }
+        } catch (error) {
+            console.error('Error advancing simulation:', error)
         }
     }
 
     disconnect() {
-        this.stopSimulation()
+        this.clearScheduledUpdate()
         if (this.socket) {
             this.socket.close()
             this.socket = null
         }
-    }
-
-    isConnected() {
-        return this.socket?.readyState === WebSocket.OPEN
     }
 }
 

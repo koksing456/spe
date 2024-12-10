@@ -40,17 +40,43 @@ export default function IncidentCounter() {
     }
   }, [])
 
-  // Simulated incident data - in real app, this would come from a central state management
+  // Listen for incidents from the backend
   useEffect(() => {
-    const timer = setInterval(() => {
-      const types = ['behavioral', 'conflict', 'resistance', 'compliance']
-      const randomType = types[Math.floor(Math.random() * types.length)]
+    const handleNewIncident = (event) => {
+      const { type, severity, description, timestamp } = event.detail
       
-      addIncident(randomType)
-    }, 30000) // Add random incident every 30 seconds
+      // Update incident count
+      setIncidents(prev => ({
+        ...prev,
+        [type]: {
+          ...prev[type],
+          count: prev[type].count + 1
+        }
+      }))
+      
+      playSound()
+      
+      // Show alert for new incident
+      setRecentIncident({
+        type,
+        timestamp: new Date(timestamp).toLocaleTimeString(),
+        description
+      })
 
-    return () => clearInterval(timer)
+      // Clear alert after 3 seconds
+      setTimeout(() => {
+        setRecentIncident(null)
+      }, 3000)
+    }
+
+    // Add event listener
+    window.addEventListener('newIncident', handleNewIncident)
+
+    // Cleanup
+    return () => window.removeEventListener('newIncident', handleNewIncident)
   }, [])
+
+  // Remove the addIncident function since incidents now come from the backend
 
   const playSound = async () => {
     if (!audioRef.current || isMuted) return
@@ -63,39 +89,6 @@ export default function IncidentCounter() {
     } catch (error) {
       console.error('Error playing sound:', error)
     }
-  }
-
-  const addIncident = (type) => {
-    setIncidents(prev => ({
-      ...prev,
-      [type]: {
-        ...prev[type],
-        count: prev[type].count + 1
-      }
-    }))
-    
-    playSound()
-    
-    // Dispatch event for IncidentLog
-    const newIncidentEvent = new CustomEvent('newIncident', {
-      detail: {
-        type,
-        severity: type === 'conflict' ? 'high' : 
-                 type === 'resistance' ? 'medium' : 'low'
-      }
-    })
-    window.dispatchEvent(newIncidentEvent)
-    
-    // Show alert for new incident
-    setRecentIncident({
-      type,
-      timestamp: new Date().toLocaleTimeString()
-    })
-
-    // Clear alert after 3 seconds
-    setTimeout(() => {
-      setRecentIncident(null)
-    }, 3000)
   }
 
   const getIncidentColor = (color) => {

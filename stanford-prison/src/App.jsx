@@ -18,118 +18,74 @@ import { websocketService, useSimulationStore } from './services/websocket'
 
 function App() {
   const { currentState, messages } = useSimulationStore()
-  const [isRunning, setIsRunning] = useState(true)
-  const [simulationSpeed, setSimulationSpeed] = useState(10000) // 10 seconds default
 
   useEffect(() => {
-    // Connect to WebSocket when component mounts
     websocketService.connect()
-
-    // Cleanup on unmount
     return () => websocketService.disconnect()
   }, [])
-
-  useEffect(() => {
-    let intervalId
-
-    const runSimulation = async () => {
-      try {
-        await fetch('http://localhost:8000/next-step', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            day: currentState.day,
-            hour: currentState.hour,
-            incident_count: currentState.incident_count,
-            stress_level: currentState.stress_level,
-            messages: messages
-          })
-        })
-      } catch (error) {
-        console.error('Failed to advance simulation:', error)
-        setIsRunning(false)
-      }
-    }
-
-    if (isRunning) {
-      // Run immediately on start
-      runSimulation()
-      // Then set up interval
-      intervalId = setInterval(runSimulation, simulationSpeed)
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId)
-      }
-    }
-  }, [isRunning, simulationSpeed, currentState, messages])
 
   return (
     <Layout>
       <div className="min-h-screen bg-gray-900">
         <div className="w-full max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Simulation Controls */}
-          <div className="mb-6 flex items-center space-x-4">
-            <button
-              onClick={() => setIsRunning(!isRunning)}
-              className={`${
-                isRunning ? 'bg-red-500 hover:bg-red-700' : 'bg-green-500 hover:bg-green-700'
-              } text-white font-bold py-2 px-4 rounded`}
-            >
-              {isRunning ? 'Pause Simulation' : 'Resume Simulation'}
-            </button>
-            <select
-              value={simulationSpeed}
-              onChange={(e) => setSimulationSpeed(Number(e.target.value))}
-              className="bg-gray-700 text-white rounded px-3 py-2"
-            >
-              <option value={5000}>Fast (5 seconds)</option>
-              <option value={10000}>Normal (10 seconds)</option>
-              <option value={20000}>Slow (20 seconds)</option>
-            </select>
-            <div className="text-white">
-              Day {currentState.day}, {String(currentState.hour).padStart(2, '0')}:00
+          {/* Time Display */}
+          <div className="mb-6 bg-gray-800 p-4 rounded-lg">
+            <div className="text-white font-bold text-xl text-center">
+              Stanford Prison Experiment - Day {currentState.day}
+            </div>
+            <div className="text-gray-400 text-center mt-1">
+              Current Time: {String(currentState.hour).padStart(2, '0')}:00
+            </div>
+            <div className="text-gray-500 text-sm text-center mt-1">
+              Updates every 4 hours
             </div>
           </div>
           
           <div className="grid grid-cols-12 gap-6">
-            {/* Left Section - Main Content */}
+            {/* Primary Content - Main Interaction Area */}
             <div className="col-span-12 lg:col-span-8 space-y-6">
-              <TimelineDisplay 
-                day={currentState.day} 
-                time={`${String(currentState.hour).padStart(2, '0')}:00`} 
-              />
-              <ZimbardoProfile />
-              <PersonnelProfiles />
-              <RelationshipMap />
-              <InteractionFeed messages={messages} />
+              {/* Core Components */}
+              <div className="space-y-4">
+                <TimelineDisplay 
+                  day={currentState.day} 
+                  time={`${String(currentState.hour).padStart(2, '0')}:00`} 
+                />
+                <InteractionFeed messages={messages} />
+              </div>
+
+              {/* Secondary Components */}
+              <div className="space-y-4 mt-8">
+                <ZimbardoProfile />
+                <PersonnelProfiles />
+                <RelationshipMap />
+              </div>
             </div>
 
-            {/* Right Section - Monitoring & Control */}
+            {/* Sidebar - Monitoring & Analysis */}
             <div className="col-span-12 lg:col-span-4 space-y-6">
-              {/* Monitoring Section */}
-              <PrisonMap />
-              <StressIndicator level={currentState.stress_level} />
-              
-              {/* Incident Section */}
-              <div className="space-y-6">
+              {/* Critical Metrics */}
+              <div className="space-y-4 bg-gray-800 p-4 rounded-lg">
+                <h2 className="text-white font-bold text-lg">Critical Metrics</h2>
+                <StressIndicator level={currentState.stress_level} />
                 <IncidentCounter count={currentState.incident_count} />
                 <IncidentLog incidents={messages.filter(m => m.type === 'incident')} />
               </div>
 
-              {/* Environment & Data Section */}
-              <EnvironmentControls />
-              <DataCharts data={currentState} />
+              {/* Environment & Analysis */}
+              <div className="space-y-4 bg-gray-800 p-4 rounded-lg">
+                <h2 className="text-white font-bold text-lg">Environment</h2>
+                <PrisonMap />
+                <EnvironmentControls />
+                <DataCharts data={currentState} />
+              </div>
 
-              {/* Profiles & Insights Section */}
-              <ParticipantProfiles />
-              <PsychologicalInsights messages={messages} />
-              
-              {/* Feedback Section */}
-              <FeedbackSection />
+              {/* Additional Insights */}
+              <div className="space-y-4 bg-gray-800 p-4 rounded-lg">
+                <h2 className="text-white font-bold text-lg">Insights & Profiles</h2>
+                <ParticipantProfiles />
+                <PsychologicalInsights messages={messages} />
+                <FeedbackSection />
+              </div>
             </div>
           </div>
         </div>
