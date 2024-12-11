@@ -11,9 +11,17 @@ import logging
 import uvicorn
 import asyncio
 from collections import deque
+from enhanced_simulation import SocialNetwork, EnhancedAgent, BehaviorAnalytics, RelationType
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Initialize enhanced features
+social_network = SocialNetwork()
+behavior_analytics = BehaviorAnalytics()
+
+# Initialize enhanced agents dictionary
+enhanced_agents = {}
 
 # Define request/response models
 class SimulationState(BaseModel):
@@ -102,30 +110,40 @@ narrator_agent = Agent(
     instructions=narrator_system_message,
     functions=[transfer_to_guard, transfer_to_prisoner, log_incident]
 )
+enhanced_agents["narrator"] = EnhancedAgent(narrator_agent, "narrator")
 
 guard_agent = Agent(
     name="Guard",
     instructions=guard_system_message,
     functions=[transfer_to_psychologist, log_incident]
 )
+enhanced_agents["guard"] = EnhancedAgent(guard_agent, "guard")
 
 prisoner_agent = Agent(
     name="Prisoner",
     instructions=prisoner_system_message,
     functions=[transfer_to_psychologist]
 )
+enhanced_agents["prisoner"] = EnhancedAgent(prisoner_agent, "prisoner")
 
 psychologist_agent = Agent(
     name="Psychologist",
     instructions=psychologist_system_message,
     functions=[transfer_to_narrator, log_incident]
 )
+enhanced_agents["psychologist"] = EnhancedAgent(psychologist_agent, "psychologist")
 
 observer_agent = Agent(
     name="Observer",
     instructions=observer_system_message,
     functions=[log_incident]
 )
+enhanced_agents["observer"] = EnhancedAgent(observer_agent, "observer")
+
+# Initialize relationships
+social_network.add_relationship("guard", "prisoner", RelationType.AUTHORITY)
+social_network.add_relationship("psychologist", "guard", RelationType.NEUTRAL)
+social_network.add_relationship("psychologist", "prisoner", RelationType.NEUTRAL)
 
 # WebSocket connection manager
 class SimulationEvent:
@@ -139,7 +157,7 @@ class ConnectionManager:
         self.message_history = deque(maxlen=100)
         self.current_state = SimulationState().dict()
         self.last_update = time.time()
-        self.min_update_interval = 10  # 4 hours in seconds
+        self.min_update_interval = 10  # 10 seconds between updates
         self.time_progression = {
             "day": 1,
             "hour": 6,  # Start at 6 AM
@@ -152,14 +170,27 @@ class ConnectionManager:
             18: SimulationEvent("Evening Activities", "Restricted movement and final tasks"),
             22: SimulationEvent("Lights Out", "Prisoners return to cells for the night")
         }
+        self.simulation_active = False
         
-    def get_current_event(self):
-        hour = self.time_progression["hour"]
-        return self.daily_events.get(hour, None)
-
+    async def start_simulation(self):
+        """Start or resume the simulation"""
+        self.simulation_active = True
+        logging.info(f"Simulation started/resumed at Day {self.time_progression['day']}, {self.time_progression['hour']:02d}:00")
+        
+    async def pause_simulation(self):
+        """Pause the simulation"""
+        self.simulation_active = False
+        logging.info("Simulation paused")
+        
+    def is_simulation_active(self):
+        """Check if simulation is currently running"""
+        return self.simulation_active
+        
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.add(websocket)
+        logging.info("New client connected")
+        
         # Send current state and message history to new connection
         await websocket.send_json({
             "type": "state_update",
@@ -170,17 +201,36 @@ class ConnectionManager:
                 "type": "new_messages",
                 "messages": list(self.message_history)
             })
+        
+        # Start simulation if this is the first connection
+        if len(self.active_connections) == 1:
+            await self.start_simulation()
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
+        logging.info("Client disconnected")
+        
+        # Pause simulation if no clients are connected
+        if not self.active_connections:
+            asyncio.create_task(self.pause_simulation())
 
     def progress_time(self):
         """Progress time by 4 hours"""
+        if not self.simulation_active:
+            return None
+            
         self.time_progression["hour"] += self.time_progression["hours_per_update"]
         if self.time_progression["hour"] >= 22:  # Last update at 10 PM
             self.time_progression["hour"] = 6  # Reset to 6 AM
             self.time_progression["day"] += 1
-        return f"Day {self.time_progression['day']}, {self.time_progression['hour']:02d}:00"
+            
+        new_time = f"Day {self.time_progression['day']}, {self.time_progression['hour']:02d}:00"
+        logging.info(f"Time progressed to {new_time}")
+        return new_time
+
+    def get_current_event(self):
+        hour = self.time_progression["hour"]
+        return self.daily_events.get(hour, None)
 
     def get_current_time(self):
         """Get current simulation time"""
@@ -216,14 +266,33 @@ manager = ConnectionManager()
 async def websocket_endpoint(websocket: WebSocket):
     try:
         await manager.connect(websocket)
+        
+        # Start initial simulation step
+        initial_state = SimulationState()
+        await next_step(initial_state)
+        
+        # Set up periodic updates
         while True:
             try:
-                # Keep the connection alive and handle incoming messages
-                data = await websocket.receive_text()
-                # You can handle incoming messages here if needed
+                # Wait for 10 seconds (simulation time interval)
+                await asyncio.sleep(10)
+                
+                # Get current state and advance simulation
+                current_state = SimulationState(
+                    day=manager.time_progression["day"],
+                    hour=manager.time_progression["hour"],
+                    incident_count=manager.current_state.get("incident_count", 0),
+                    stress_level=manager.current_state.get("stress_level", 0)
+                )
+                await next_step(current_state)
+                
             except WebSocketDisconnect:
                 manager.disconnect(websocket)
                 break
+            except Exception as e:
+                logging.error(f"Error in simulation loop: {str(e)}")
+                continue
+                
     except Exception as e:
         logging.error(f"WebSocket error: {str(e)}")
         manager.disconnect(websocket)
@@ -503,18 +572,23 @@ async def get_agent_responses(context: dict, time_str: str) -> dict:
         "ongoing_conflicts": []
     }
     
-    # Get narrator's scenario first to set the scene
-    narrator_response = client.run(
-        agent=narrator_agent,
-        messages=[{
-            "role": "user", 
-            "content": f"Current time: {time_str}.{event_description}\nDescribe the current scene and atmosphere in the prison."
-        }],
-        context_variables=conversation_context
-    )
-    
-    # Update context with narrator's scene
-    conversation_context["current_scene"] = narrator_response.messages[-1]['content']
+    # Get narrator's response only at the start of each day (6 AM)
+    hour = context["hour"]
+    narrator_response = None
+    if hour == 6:
+        narrator_response = client.run(
+            agent=narrator_agent,
+            messages=[{
+                "role": "user", 
+                "content": f"Current time: {time_str}.{event_description}\nDescribe the current scene and atmosphere in the prison."
+            }],
+            context_variables=conversation_context
+        )
+        # Update context with narrator's scene
+        conversation_context["current_scene"] = narrator_response.messages[-1]['content']
+    else:
+        # Use a simple scene description for non-start-of-day hours
+        conversation_context["current_scene"] = f"Day {context['day']}, {hour:02d}:00 - Regular prison activities continue."
     
     # Get guard's response based on the scene
     guard_response = client.run(
@@ -561,34 +635,43 @@ async def get_agent_responses(context: dict, time_str: str) -> dict:
     context["stress_level"] = new_stress
     conversation_context["emotional_state"]["prisoners"]["stress_level"] = new_stress
 
-    # Get psychologist's analysis of the interaction
-    psych_response = client.run(
-        agent=psychologist_agent,
-        messages=[{
-            "role": "user", 
-            "content": f"Analyze this interaction at {time_str}:\nScene: {conversation_context['current_scene']}\nGuard: {guard_response.messages[-1]['content']}\nPrisoner: {prisoner_response.messages[-1]['content']}"
-        }],
-        context_variables=conversation_context
-    )
-    
-    # Check for conflicts in psychologist's analysis
-    if "conflict" in psych_response.messages[-1]['content'].lower() or "tension" in psych_response.messages[-1]['content'].lower():
-        context["incident_count"] += 1
-        conversation_context["ongoing_conflicts"].append({
-            "day": context["day"],
-            "hour": context["hour"],
-            "description": psych_response.messages[-1]['content']
-        })
-    
-    # Check for incidents in all responses
+    # Initialize responses dictionary with guard and prisoner responses
     all_responses = {
-        "narrator": narrator_response.messages[-1]['content'],
         "guard": guard_response.messages[-1]['content'],
-        "prisoner": prisoner_response.messages[-1]['content'],
-        "psychologist": psych_response.messages[-1]['content']
+        "prisoner": prisoner_response.messages[-1]['content']
     }
 
-    # Look for incidents in each response
+    # Add narrator's response if it's start of day
+    if narrator_response:
+        all_responses["narrator"] = narrator_response.messages[-1]['content']
+
+    # Get psychologist's response only at the end of day (22:00)
+    if hour == 22:
+        psych_response = client.run(
+            agent=psychologist_agent,
+            messages=[{
+                "role": "user", 
+                "content": f"It's the end of Day {context['day']}. Please provide a comprehensive summary of today's observations, including:\n"
+                          f"1. Overall behavioral patterns\n"
+                          f"2. Changes in stress levels (currently at {new_stress}/10)\n"
+                          f"3. Notable incidents (total: {context['incident_count']})\n"
+                          f"4. Guard-prisoner dynamics\n"
+                          f"5. Recommendations for tomorrow"
+            }],
+            context_variables=conversation_context
+        )
+        all_responses["psychologist"] = psych_response.messages[-1]['content']
+
+        # Check for conflicts in psychologist's analysis
+        if "conflict" in psych_response.messages[-1]['content'].lower() or "tension" in psych_response.messages[-1]['content'].lower():
+            context["incident_count"] += 1
+            conversation_context["ongoing_conflicts"].append({
+                "day": context["day"],
+                "hour": context["hour"],
+                "description": psych_response.messages[-1]['content']
+            })
+
+    # Check for incidents in all responses
     for role, content in all_responses.items():
         incident_type, severity = detect_incident_type(content, role)
         if incident_type:
@@ -605,11 +688,78 @@ async def get_agent_responses(context: dict, time_str: str) -> dict:
                 })
                 context["incident_count"] += 1
 
+    # Update social network with interactions
+    social_network.update_relationship("guard", "prisoner", {
+        "timestamp": datetime.now(),
+        "type": "interaction",
+        "guard_action": guard_response.messages[-1]['content'],
+        "prisoner_reaction": prisoner_response.messages[-1]['content'],
+        "sentiment": -0.1 if context["incident_count"] > 0 else 0.1
+    })
+    
+    # Log interaction in behavior analytics
+    behavior_analytics.log_interaction({
+        "guard_id": "guard",
+        "prisoner_id": "prisoner",
+        "context": conversation_context,
+        "outcome": "success" if context["stress_level"] < 5 else "failure",
+        "pattern_type": "routine_interaction"
+    })
+    
+    # Update agent learning
+    enhanced_agents["guard"].learn_from_interaction({
+        "interaction": guard_response.messages[-1]['content'],
+        "reaction": prisoner_response.messages[-1]['content'],
+        "outcome": "success" if context["stress_level"] < 5 else "failure",
+        "context": conversation_context
+    })
+    
+    enhanced_agents["prisoner"].learn_from_interaction({
+        "interaction": prisoner_response.messages[-1]['content'],
+        "reaction": guard_response.messages[-1]['content'],
+        "outcome": "success" if context["stress_level"] < 5 else "failure",
+        "context": conversation_context
+    })
+    
+    # Track evolution
+    for agent_id, agent in enhanced_agents.items():
+        behavior_analytics.track_evolution(agent_id, {
+            "personality_traits": agent.personality_traits,
+            "behavior_patterns": {k: v.dict() for k, v in agent.behavior_patterns.items()}
+        })
+    
+    # Analyze stress patterns
+    stress_analysis = behavior_analytics.analyze_stress_patterns(
+        "prisoner",
+        context["stress_level"],
+        conversation_context
+    )
+    
+    if stress_analysis:
+        await manager.broadcast({
+            "type": "stress_analysis",
+            "analysis": stress_analysis
+        })
+    
     return all_responses
 
 @app.get("/status")
 async def get_status():
     return {"status": "running"}
+
+# Add new endpoint for analytics
+@app.get("/analytics/summary")
+async def get_analytics_summary():
+    return behavior_analytics.get_summary_report()
+
+@app.get("/social/network")
+async def get_social_network():
+    return {
+        "relationships": {f"{k[0]}-{k[1]}": v.dict() for k, v in social_network.relationships.items()},
+        "groups": {k: v.dict() for k, v in social_network.groups.items()},
+        "hierarchies": social_network.hierarchies,
+        "influence_scores": social_network.influence_scores
+    }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

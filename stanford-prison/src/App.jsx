@@ -16,6 +16,8 @@ import ZimbardoProfile from './components/visual/ZimbardoProfile'
 import PersonnelProfiles from './components/visual/PersonnelProfiles'
 import IncidentCounter from './components/visual/IncidentCounter'
 import RelationshipMap from './components/visual/RelationshipMap'
+import Analytics from './components/Analytics'
+import SocialNetwork from './components/SocialNetwork'
 import LandingPage from './components/LandingPage'
 import { websocketService, useSimulationStore } from './services/websocket'
 import NeuralNetwork from './utils/neuralNetwork'
@@ -137,6 +139,17 @@ const SimulationDashboard = () => {
                 <ZimbardoProfile />
                 <PersonnelProfiles />
                 {/* <RelationshipMap /> */}
+              </motion.div>
+
+              {/* Analytics Section */}
+              <motion.div
+                className="space-y-4 mt-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                <Analytics />
+                <SocialNetwork />
               </motion.div>
             </motion.div>
 
