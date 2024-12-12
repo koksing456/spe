@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import Layout from './components/layout/Layout'
 import TimelineDisplay from './components/timeline/TimelineDisplay'
@@ -19,11 +19,20 @@ import RelationshipMap from './components/visual/RelationshipMap'
 import Analytics from './components/Analytics'
 import SocialNetwork from './components/SocialNetwork'
 import LandingPage from './components/LandingPage'
+import ComingSoonNotice from './components/ComingSoonNotice'
 import { websocketService, useSimulationStore } from './services/websocket'
 import NeuralNetwork from './utils/neuralNetwork'
 import { soundManager } from '../public/sounds/soundEffects'
 
+// Simulation is not yet available
+const SIMULATION_AVAILABLE = true
+
 const SimulationDashboard = () => {
+  // If simulation is not available, redirect to landing page
+  if (!SIMULATION_AVAILABLE) {
+    return <Navigate to="/" replace />
+  }
+
   const { currentState, messages } = useSimulationStore()
   const canvasRef = useRef(null)
   const networkRef = useRef(null)
@@ -148,8 +157,8 @@ const SimulationDashboard = () => {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
               >
-                <Analytics />
-                <SocialNetwork />
+                {/* <Analytics />
+                <SocialNetwork /> */}
               </motion.div>
             </motion.div>
 
@@ -207,10 +216,20 @@ const SimulationDashboard = () => {
 }
 
 function App() {
+  const [cinematicComplete, setCinematicComplete] = useState(false);
+
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route 
+          path="/" 
+          element={
+            <>
+              <LandingPage onCinematicComplete={() => setCinematicComplete(true)} />
+              {!SIMULATION_AVAILABLE && <ComingSoonNotice cinematicComplete={cinematicComplete} />}
+            </>
+          } 
+        />
         <Route path="/simulation" element={<SimulationDashboard />} />
       </Routes>
     </Router>

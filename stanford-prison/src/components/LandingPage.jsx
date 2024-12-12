@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useAnimation, useMotionValue, useTransform, useSpring } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 // Cinematic sequences
 const sequences = [
@@ -48,7 +48,11 @@ const quotes = [
   }
 ];
 
-const LandingPage = () => {
+// Simulation availability flag (same as in App.jsx)
+const SIMULATION_AVAILABLE = true;
+
+const LandingPage = ({ onCinematicComplete }) => {
+  const navigate = useNavigate();
   const [currentPhase, setCurrentPhase] = useState('cinematic');
   const [sequenceIndex, setSequenceIndex] = useState(0);
   const [currentQuote, setCurrentQuote] = useState(0);
@@ -140,12 +144,13 @@ const LandingPage = () => {
         } else {
           setCurrentPhase('experience');
           if (audioEnabled) audioRef.current.ambient.play();
+          onCinematicComplete?.();
         }
       }, sequences[sequenceIndex].duration);
 
       return () => clearTimeout(timer);
     }
-  }, [currentPhase, sequenceIndex, audioEnabled]);
+  }, [currentPhase, sequenceIndex, audioEnabled, onCinematicComplete]);
 
   // Easter egg trigger
   useEffect(() => {
@@ -153,6 +158,20 @@ const LandingPage = () => {
       setShowEasterEgg(true);
     }
   }, [interactionCount]);
+
+  const handleExperimentClick = () => {
+    if (!SIMULATION_AVAILABLE) {
+      if (audioEnabled) audioRef.current.click.play();
+      return;
+    }
+    setCurrentPhase('experience');
+  };
+
+  const handleSimulationEnter = (e) => {
+    e.preventDefault();
+    if (audioEnabled) audioRef.current.click.play();
+    navigate('/simulation');
+  };
 
   const renderCinematicSequence = () => (
     <motion.div 
@@ -175,6 +194,23 @@ const LandingPage = () => {
           {sequences[sequenceIndex].text}
         </motion.div>
       </AnimatePresence>
+      
+      {/* Skip Button */}
+      <motion.button
+        className="absolute bottom-8 right-8 px-4 py-2 bg-gray-800/50 text-gray-400 rounded-lg text-sm backdrop-blur-sm hover:bg-gray-700/50 hover:text-gray-300 transition-all"
+        onClick={() => {
+          if (audioEnabled) audioRef.current.click.play();
+          setCurrentPhase('experience');
+          onCinematicComplete?.();
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        Skip Intro
+      </motion.button>
     </motion.div>
   );
 
@@ -194,12 +230,48 @@ const LandingPage = () => {
         }}
       />
 
-      {/* Parallax Container */}
+      {/* Split Screen Experience */}
       <motion.div 
         className="relative z-20 h-screen"
         style={{ x: parallaxX, y: parallaxY }}
       >
-        {/* Split Screen Experience */}
+        {/* Interactive Quote Display */}
+        <motion.div 
+          className="absolute top-12 left-1/2 transform -translate-x-1/2 text-center max-w-3xl px-8 z-30"
+          animate={controls}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentQuote}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="relative"
+            >
+              <motion.div
+                className="absolute -inset-8 rounded-lg"
+                animate={{
+                  background: `linear-gradient(135deg, ${quotes[currentQuote].color}22 0%, transparent 100%)`,
+                  boxShadow: `0 0 30px ${quotes[currentQuote].color}11`
+                }}
+              />
+              <motion.p 
+                className="text-3xl italic mb-4 relative z-10 text-yellow-400"
+                whileHover={{ scale: 1.05 }}
+              >
+                {quotes[currentQuote].text}
+              </motion.p>
+              <motion.p 
+                className="text-lg text-gray-400 relative z-10"
+                whileHover={{ opacity: 1 }}
+              >
+                - {quotes[currentQuote].author}
+              </motion.p>
+            </motion.div>
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Split Screen Content */}
         <div className="flex h-full">
           {/* Left Side - Historical */}
           <motion.div 
@@ -306,121 +378,49 @@ const LandingPage = () => {
           </motion.div>
         </div>
 
-        {/* Interactive Quote Display */}
-        <motion.div 
-          className="absolute top-1/4 left-1/2 transform -translate-x-1/2 text-center max-w-3xl px-8"
-          animate={controls}
-        >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentQuote}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="relative"
-            >
-              <motion.div
-                className="absolute -inset-8 rounded-lg"
-                animate={{
-                  background: `linear-gradient(135deg, ${quotes[currentQuote].color}22 0%, transparent 100%)`,
-                  boxShadow: `0 0 30px ${quotes[currentQuote].color}11`
-                }}
-              />
-              <motion.p 
-                className="text-3xl italic mb-4 relative z-10"
-                whileHover={{ scale: 1.05 }}
-              >
-                {quotes[currentQuote].text}
-              </motion.p>
-              <motion.p 
-                className="text-lg opacity-75 relative z-10"
-                whileHover={{ opacity: 1 }}
-              >
-                - {quotes[currentQuote].author}
-              </motion.p>
-            </motion.div>
-          </AnimatePresence>
-        </motion.div>
-
-        {/* Enter Button */}
-        <motion.div 
-          className="absolute bottom-16 left-1/2 transform -translate-x-1/2"
-          whileHover={{ scale: 1.1 }}
-        >
-          <Link to="/simulation">
-            <motion.button
-              className="relative px-16 py-6 bg-transparent overflow-hidden rounded-full group"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onHoverStart={() => audioEnabled && audioRef.current.hover.play()}
-              onClick={() => audioEnabled && audioRef.current.click.play()}
-            >
-              <motion.div
-                className="absolute inset-0 bg-white"
-                initial={{ scale: 0 }}
-                whileHover={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                style={{ originX: 0, originY: 0 }}
-              />
-              <motion.div
-                className="absolute inset-0 border-2 border-white rounded-full"
-                whileHover={{ scale: 1.1, opacity: 0 }}
-              />
-              <span className="relative z-10 text-2xl font-bold group-hover:text-black transition-colors duration-300">
-                Enter Simulation
-              </span>
-            </motion.button>
+        {/* Action Button */}
+        <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center justify-center pb-16 z-30">
+          <Link
+            to="/simulation"
+            className="px-12 py-4 bg-gray-700/50 backdrop-blur-sm text-gray-300 rounded-lg text-xl font-semibold hover:bg-gray-600/50 transition-all mb-4"
+            onClick={handleSimulationEnter}
+          >
+            Enter Simulation
           </Link>
-        </motion.div>
-
-        {/* Audio Controls */}
-        <motion.button
-          className="fixed top-4 right-4 z-30 p-4 rounded-full bg-white/10 backdrop-blur-sm"
-          whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.2)' }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => {
-            setAudioEnabled(!audioEnabled);
-            Object.values(audioRef.current).forEach(audio => {
-              if (audio) {
-                audio.muted = audioEnabled;
-              }
-            });
-          }}
-        >
-          <motion.div
-            animate={{ rotate: audioEnabled ? 0 : 180 }}
-            transition={{ type: "spring", stiffness: 200, damping: 10 }}
-          >
-            {audioEnabled ? "🔊" : "🔇"}
-          </motion.div>
-        </motion.button>
-
-        {/* Easter Egg */}
-        {showEasterEgg && (
-          <motion.div
-            className="fixed bottom-4 right-4 text-sm opacity-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.5 }}
-          >
-            Discovered the hidden truth... 🔓
-          </motion.div>
-        )}
+        </div>
       </motion.div>
 
-      {/* Mouse Trailer Effect */}
-      <motion.div
-        className="fixed pointer-events-none z-50 mix-blend-screen"
-        style={{
-          x: smoothMouseX,
-          y: smoothMouseY,
-          width: 200,
-          height: 200,
-          transform: 'translate(-50%, -50%)',
-          background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)'
+      {/* Audio Controls */}
+      <motion.button
+        className="fixed bottom-8 right-8 z-30 p-3 rounded-full bg-gray-800 hover:bg-gray-700 transition-colors"
+        onClick={() => {
+          setAudioEnabled(!audioEnabled);
+          if (!audioEnabled) {
+            audioRef.current.ambient.play();
+          } else {
+            audioRef.current.ambient.pause();
+          }
         }}
-      />
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        {audioEnabled ? (
+          <span className="text-white">🔊</span>
+        ) : (
+          <span className="text-white">🔇</span>
+        )}
+      </motion.button>
     </>
   );
+
+  // Add quote rotation effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentQuote((prev) => (prev + 1) % quotes.length);
+    }, 5000); // Change quote every 5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">

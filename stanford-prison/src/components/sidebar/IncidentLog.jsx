@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 export default function IncidentLog() {
   const [incidents, setIncidents] = useState([
     {
-      time: '06:15',
-      type: 'Behavioral',
-      description: 'First signs of guard authority establishment',
-      severity: 'low'
+      time: '',
+      type: '',
+      description: '',
+      severity: ''
     }
   ])
 
