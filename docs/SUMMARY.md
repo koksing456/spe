@@ -1,0 +1,16 @@
+# Table of contents
+
+- [Introduction](README.md)
+- [Research](research/README.md)
+  - [Original Experiment](research/original-experiment.md)
+- [AI System](ai-system.md)
+  - [System Overview](ai-system/overview.md)
+  - [AI Agents](ai-system/agents.md)
+  - [Behavioral Systems](ai-system/behavior.md)
+  - [Technical Implementation](ai-system/implementation.md)
+  - [Ethical Considerations](ai-system/ethics.md)
+- [Components](components/README.md)
+  - [Core Components](components/core.md)
+  - [Monitoring Components](components/monitoring.md)
+  - [Analysis Components](components/analysis.md)
+  - [Profile Components](components/profiles.md)
