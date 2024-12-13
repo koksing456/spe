@@ -1,5 +1,21 @@
 ---
-icon: hand-wave
+icon: handcuffs
+cover: .gitbook/assets/image 3.webp
+coverY: 35
+layout:
+  cover:
+    visible: true
+    size: hero
+  title:
+    visible: true
+  description:
+    visible: true
+  tableOfContents:
+    visible: true
+  outline:
+    visible: true
+  pagination:
+    visible: true
 ---
 
 # Introduction
