@@ -5,7 +5,7 @@ coverY: 35
 layout:
   cover:
     visible: true
-    size: hero
+    size: full
   title:
     visible: true
   description:
@@ -20,8 +20,6 @@ layout:
 
 # Introduction
 
-<figure><img src=".gitbook/assets/image 8.webp" alt=""><figcaption></figcaption></figure>
-
 
 
 This project is an interactive simulation of the Stanford Prison Experiment, implemented as a web application. It provides users with a deep understanding of the psychological dynamics that emerged during the original 1971 experiment.
@@ -29,6 +27,8 @@ This project is an interactive simulation of the Stanford Prison Experiment, imp
 ## Overview
 
 The Stanford Prison Experiment Simulation allows users to explore and understand the psychological effects of perceived power through an interactive interface. The simulation recreates the environment and conditions of the original experiment, using AI to generate realistic interactions between guards and prisoners.
+
+<figure><img src=".gitbook/assets/image 8.webp" alt=""><figcaption></figcaption></figure>
 
 ## Key Features
 
