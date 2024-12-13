@@ -347,7 +347,11 @@ async def next_step(current_state: SimulationState):
                     "timestamp": datetime.now().isoformat(),
                     "role": role,
                     "content": content,
-                    "type": "message"
+                    "type": "message",
+                    "simulationTime": {
+                        "day": context["day"],
+                        "hour": context["hour"]
+                    }
                 }
                 for role, content in responses.items()
             ]

@@ -2,31 +2,45 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect, useRef, useState, useMemo } from 'react'
 import Message from './Message'
 import { soundManager } from '../../../public/sounds/soundEffects'
+import { useSimulationStore } from '../../services/websocket'
 
 const MESSAGES_PER_PAGE = 20
-const TIME_GROUP_INTERVAL = 3600000 // 1 hour in milliseconds
+const TIME_SLOTS = [6, 10, 14, 18, 22] // Time slots from backend
 
 export default function InteractionFeed({ messages = [] }) {
   const feedRef = useRef(null)
   const prevMessagesLength = useRef(messages.length)
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [visibleMessages, setVisibleMessages] = useState(MESSAGES_PER_PAGE)
-  
-  // Group messages by time periods
+  const { currentState } = useSimulationStore()
+
+  // Group messages by experiment time periods
   const groupedMessages = useMemo(() => {
     const groups = {}
-    messages.slice(0, visibleMessages).forEach(message => {
-      const timestamp = new Date(message.timestamp)
-      const groupKey = Math.floor(timestamp.getTime() / TIME_GROUP_INTERVAL)
+    const sortedMessages = [...messages].slice(0, visibleMessages)
+
+    sortedMessages.forEach(message => {
+      // Each message should have the simulation time when it was created
+      const simulationTime = message.simulationTime || { day: 1, hour: 6 }
+      const groupKey = `${simulationTime.day}-${simulationTime.hour}`
+
       if (!groups[groupKey]) {
         groups[groupKey] = {
-          timestamp,
+          day: simulationTime.day,
+          hour: simulationTime.hour,
           messages: []
         }
       }
       groups[groupKey].messages.push(message)
     })
-    return Object.values(groups).sort((a, b) => b.timestamp - a.timestamp)
+
+    // Sort groups by time (newest first)
+    return Object.values(groups).sort((a, b) => {
+      if (b.day === a.day) {
+        return b.hour - a.hour
+      }
+      return b.day - a.day
+    })
   }, [messages, visibleMessages])
 
   useEffect(() => {
@@ -65,12 +79,11 @@ export default function InteractionFeed({ messages = [] }) {
     soundManager.playUI('discover')
   }
 
-  const formatTimeGroup = (timestamp) => {
-    if (!messages.length) return ''
-    const date = new Date(timestamp)
-    const firstMessageDate = new Date(messages[0].timestamp)
-    const dayNumber = Math.floor((date - firstMessageDate) / (24 * 3600000)) + 1
-    return `Day ${dayNumber} - ${date.getHours().toString().padStart(2, '0')}:00`
+  const formatTimeGroup = (group) => {
+    return {
+      day: `Day ${group.day}`,
+      time: `${group.hour.toString().padStart(2, '0')}:00`
+    }
   }
 
   return (
@@ -116,48 +129,81 @@ export default function InteractionFeed({ messages = [] }) {
           </motion.button>
         )}
 
-        <AnimatePresence mode="popLayout">
-          {groupedMessages.map((group, groupIndex) => (
-            <motion.div
-              key={group.timestamp.getTime()}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="mb-6"
-            >
-              <motion.div 
-                className="sticky top-0 z-10 mb-2 py-1 px-2 text-sm text-gray-400 bg-gray-900/80 backdrop-blur-sm rounded-lg border border-gray-800"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: groupIndex * 0.1 }}
-              >
-                {formatTimeGroup(group.timestamp)}
-              </motion.div>
+        <div className="relative">
+          {/* Vertical Timeline Line */}
+          <div className="absolute left-[27px] top-0 bottom-0 w-0.5 bg-purple-500/20" />
 
-              {group.messages.map((message, index) => (
-                <motion.div
-                  key={`${message.timestamp}-${index}`}
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ 
-                    duration: 0.3,
-                    delay: index * 0.05,
-                    type: "spring",
-                    stiffness: 100 
-                  }}
-                  whileHover={{ 
-                    scale: 1.02,
-                    transition: { duration: 0.2 }
-                  }}
-                  className="prison-card-content backdrop-blur-sm bg-gray-800/90 border border-purple-500/20 rounded-lg mb-3"
+          <AnimatePresence mode="popLayout">
+            {groupedMessages.map((group, groupIndex) => (
+              <motion.div
+                key={`${group.day}-${group.hour}`}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                className="relative mb-8 pl-14"
+              >
+                {/* Timeline Dot */}
+                <div className="absolute left-[20px] -translate-x-1/2">
+                  <div className="w-4 h-4 bg-purple-500 rounded-full relative z-10">
+                    <div className="absolute w-6 h-6 bg-purple-500/30 rounded-full -top-1 -left-1 animate-ping" />
+                  </div>
+                </div>
+
+                {/* Time Label */}
+                <motion.div 
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-14 text-right pr-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: groupIndex * 0.1 }}
                 >
-                  <Message {...message} />
+                  <div className="text-sm font-medium text-purple-400">
+                    {formatTimeGroup(group).time}
+                  </div>
                 </motion.div>
-              ))}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+
+                {/* Content Card */}
+                <div className="relative">
+                  {/* Header Card */}
+                  <motion.div 
+                    className="mb-4 py-2 px-4 text-gray-200 bg-gray-900/95 backdrop-blur-sm rounded-lg border border-purple-500/30 shadow-lg"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: groupIndex * 0.1 }}
+                  >
+                    <div className="text-lg font-bold text-purple-400">
+                      {formatTimeGroup(group).day}
+                    </div>
+                  </motion.div>
+
+                  {/* Messages */}
+                  <div className="space-y-3">
+                    {group.messages.map((message, index) => (
+                      <motion.div
+                        key={`${message.timestamp}-${index}`}
+                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ 
+                          duration: 0.3,
+                          delay: index * 0.05,
+                          type: "spring",
+                          stiffness: 100 
+                        }}
+                        whileHover={{ 
+                          scale: 1.02,
+                          transition: { duration: 0.2 }
+                        }}
+                        className="prison-card-content backdrop-blur-sm bg-gray-800/90 border border-purple-500/20 rounded-lg"
+                      >
+                        <Message {...message} />
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
 
         {messages.length === 0 && (
           <motion.div 

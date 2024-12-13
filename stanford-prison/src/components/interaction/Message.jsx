@@ -182,7 +182,6 @@ export default function Message({ role, content, timestamp }) {
           >
             {role === 'narrator' ? 'Dr. Zimbardo' : role}
           </motion.span>
-          <span className="text-sm text-gray-500">{timestamp}</span>
         </motion.div>
         
         <motion.p 
