@@ -1,6 +1,8 @@
-# The AI Behind the Experiment
+# System Overview
 
-Our simulation brings the Stanford Prison Experiment to life through artificial intelligence that thinks and acts independently. Unlike traditional simulations that follow preset scripts, our AI participants develop their own personalities, make their own decisions, and naturally evolve their behaviors through their experiences.
+<figure><img src="../.gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
+
+Our simulation brings the Stanford Prison Experiment to life through AI using OpenAI Swarm that thinks and acts independently. Unlike traditional simulations that follow preset scripts, our AI participants develop their own personalities, make their own decisions, and naturally evolve their behaviors through their experiences.
 
 ## Natural Development
 
@@ -48,4 +50,4 @@ Our AI participants develop their own understanding of ethical boundaries. Some 
 
 ## Continuous Evolution
 
-The simulation continues to surprise us with new patterns of behavior and interaction. Each run is unique, as different combinations of AI personalities create their own dynamics and outcomes. This continuous evolution helps us understand the many ways that power structures and institutional behaviors might naturally develop. 
+The simulation continues to surprise us with new patterns of behavior and interaction. Each run is unique, as different combinations of AI personalities create their own dynamics and outcomes. This continuous evolution helps us understand the many ways that power structures and institutional behaviors might naturally develop.

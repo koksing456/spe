@@ -2,7 +2,7 @@
 
 
 
-<figure><img src="../.gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
 
 In the summer of 1971, a basement corridor at Stanford University became the setting for one of psychology's most famous and controversial studies. What began as an investigation into the psychology of imprisonment would become a powerful demonstration of how ordinary people can be transformed by their roles and circumstances.
 
