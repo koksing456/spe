@@ -1,4 +1,8 @@
-# The Original Stanford Prison Experiment
+# Original Experiment
+
+
+
+<figure><img src="../.gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
 
 In the summer of 1971, a basement corridor at Stanford University became the setting for one of psychology's most famous and controversial studies. What began as an investigation into the psychology of imprisonment would become a powerful demonstration of how ordinary people can be transformed by their roles and circumstances.
 
@@ -29,10 +33,11 @@ What happened next surprised even the researchers. The guards began treating the
 ## Critical Incidents
 
 Several events stand out from the experiment:
-- A prisoner rebellion on the second day
-- Guards' increasing use of psychological tactics
-- Prisoners beginning to accept their roles so completely they stopped referring to themselves by their real names
-- Some prisoners experiencing such severe distress they had to be released early
+
+* A prisoner rebellion on the second day
+* Guards' increasing use of psychological tactics
+* Prisoners beginning to accept their roles so completely they stopped referring to themselves by their real names
+* Some prisoners experiencing such severe distress they had to be released early
 
 ## The Early End
 
@@ -41,59 +46,66 @@ Though planned for two weeks, the experiment was stopped after just six days. Ch
 ## Understanding the Impact
 
 The experiment revealed several crucial insights about human nature:
-- How quickly people can adapt to and internalize social roles
-- The powerful influence of situational forces on behavior
-- How institutional settings can normalize concerning behavior
-- The gradual nature of ethical boundaries being crossed
+
+* How quickly people can adapt to and internalize social roles
+* The powerful influence of situational forces on behavior
+* How institutional settings can normalize concerning behavior
+* The gradual nature of ethical boundaries being crossed
 
 ## Controversial Aspects
 
 The experiment raised significant ethical concerns:
-- The psychological distress experienced by participants
-- The lack of clear limits on guard behavior
-- The difficulty of participants withdrawing once the experiment began
-- The dual role of Zimbardo as both principal investigator and prison superintendent
+
+* The psychological distress experienced by participants
+* The lack of clear limits on guard behavior
+* The difficulty of participants withdrawing once the experiment began
+* The dual role of Zimbardo as both principal investigator and prison superintendent
 
 ## Legacy and Learning
 
 Today, the Stanford Prison Experiment is viewed as both a landmark study and a cautionary tale. It demonstrates:
-- The power of social roles and situations
-- The importance of ethical oversight in research
-- How easily authority can lead to abuse
-- The need for clear boundaries and monitoring
+
+* The power of social roles and situations
+* The importance of ethical oversight in research
+* How easily authority can lead to abuse
+* The need for clear boundaries and monitoring
 
 ## Relevance Today
 
 The insights from the original experiment remain deeply relevant:
-- In understanding institutional behavior
-- In recognizing warning signs of power abuse
-- In designing organizational structures
-- In preventing systemic abuse of authority
+
+* In understanding institutional behavior
+* In recognizing warning signs of power abuse
+* In designing organizational structures
+* In preventing systemic abuse of authority
 
 ## Our Simulation's Approach
 
 Our simulation allows us to explore these same dynamics, but with important differences:
-- AI participants develop their behaviors naturally
-- Ethical boundaries are maintained
-- Psychological safety is ensured
-- Learning is prioritized over replication
+
+* AI participants develop their behaviors naturally
+* Ethical boundaries are maintained
+* Psychological safety is ensured
+* Learning is prioritized over replication
 
 ## Historical Context
 
 The experiment took place during a time of growing interest in:
-- Prison reform
-- Social psychology
-- Human rights
-- Research ethics
+
+* Prison reform
+* Social psychology
+* Human rights
+* Research ethics
 
 Understanding this context helps us appreciate both the experiment's significance and its controversies.
 
 ## Continuing Impact
 
 The Stanford Prison Experiment continues to influence:
-- Our understanding of human behavior
-- Approaches to institutional design
-- Training for authority positions
-- Research ethics guidelines
 
-Through our simulation, we can explore these important lessons while ensuring we learn from both the insights and the ethical concerns of the original experiment. 
+* Our understanding of human behavior
+* Approaches to institutional design
+* Training for authority positions
+* Research ethics guidelines
+
+Through our simulation, we can explore these important lessons while ensuring we learn from both the insights and the ethical concerns of the original experiment.
